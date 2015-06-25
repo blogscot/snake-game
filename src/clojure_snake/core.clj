@@ -35,7 +35,7 @@
 
 ; function for creating a snake
 (defn create-snake []
-  {:body (list [1 1])
+  {:body (for [x (range 8 -1 -1)] [x 10])
    :dir [1 0]
    :type :snake
    :color (Color. 15 160 70)})
