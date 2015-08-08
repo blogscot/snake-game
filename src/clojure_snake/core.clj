@@ -2,7 +2,8 @@
   (:import (java.awt Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
            (java.awt.event ActionListener KeyListener))
-  (:use clojure-snake.util.import-static))
+  (:use clojure-snake.util.import-static)
+  (:use clojure-snake.gpset))
 (import-static java.awt.event.KeyEvent VK_LEFT VK_RIGHT VK_UP VK_DOWN)
 
 ; ---------------------------------------------------------------------
@@ -19,33 +20,9 @@
            VK_UP    [0 -1]
            VK_DOWN  [0 1]})
 
-; math functions for game board
-(defn add-points [& pts]
-  (vec (apply map + pts)))
-
 (defn point-to-screen-rect [pt]
   (map #(* point-size %)
        [(pt 0) (pt 1) 1 1]))
-
-; function for creating an apple
-(defn create-apple []
-  {:location [(rand-int width) (rand-int height)]
-   :color (Color. 210 50 90)
-   :type :apple})
-
-; function for creating a snake
-(defn create-snake []
-  {:body (for [x (range 8 -1 -1)] [x 10])
-   :dir [1 0]
-   :type :snake
-   :color (Color. 15 160 70)
-   :score 0})
-
-; function for moving a snake
-(defn move [{:keys [body dir score] :as snake} & grow]
-  (assoc snake :body (cons (add-points (first body) dir)
-                           (if grow body (butlast body)))
-               :score (if grow (inc score) score)))
 
 ; function for checking if the player won
 (defn win? [{body :body}]
@@ -66,11 +43,6 @@
 (defn lose? [snake]
   (or (head-overlaps-body? snake) (out-of-bounds? snake)))
 
-; function for checking if the snake eats an apple
-; (check if head location equals apple location)
-(defn eats? [{[snake-head] :body} {apple :location}]
-  (= snake-head apple))
-
 ; function that changes direction
 (defn turn [snake newdir]
   (assoc snake :dir newdir))
@@ -81,20 +53,23 @@
 ; function that resets the game state
 (defn reset-game [snake apple]
   (dosync (ref-set snake (create-snake))
-          (ref-set apple (create-apple)))
+          (ref-set apple (create-apple))
+          (ref-set direction RIGHT)
+          (ref-set steps 0)
+          (ref-set score 0))
   nil)
 
 ; function for updating snake's direction
 (defn update-direction [snake newdir]
-  (when newdir (dosync (alter snake turn newdir))))
+  (when newdir (dosync (ref-set direction newdir))))
 
 ; function for updating positions of snake and apple
 (defn update-positions [snake apple]
   (dosync
     (if (eats? @snake @apple)
       (do (ref-set apple (create-apple))
-          (alter snake move :grow))
-      (alter snake move)))
+          (alter snake move @direction @apple :grow))
+      (alter snake move @direction @apple)))
   nil)
 
 ; ---------------------------------------------------------------------
@@ -143,9 +118,11 @@
 
 ; main game function
 (defn game []
-  (let [snake (ref (create-snake))
-        apple (ref (create-apple))
-        frame (JFrame. "Snake")
+  (dosync
+   (ref-set snake (create-snake))
+   (ref-set apple (create-apple))
+   (ref-set direction RIGHT)
+   (let [frame (JFrame. "Snake")
         panel (game-panel frame snake apple)
         timer (Timer. turn-millis panel)]
     (doto panel
@@ -158,4 +135,4 @@
       (.setResizable false)
       (.setDefaultCloseOperation WindowConstants/EXIT_ON_CLOSE))
     (.start timer)
-    [snake, apple, timer]))
+    [snake, apple, timer])))
