@@ -13,7 +13,7 @@
 (def width 19)
 (def height 10)
 (def point-size 25)
-(def turn-millis 100)
+(def turn-millis 150)
 (def win-length 211)
 (def dirs {VK_LEFT  [-1 0]
            VK_RIGHT [1 0]
@@ -27,21 +27,6 @@
 ; function for checking if the player won
 (defn win? [{body :body}]
   (>= (count body) win-length))
-
-; function for checking if the player lost the game,
-; which means that head of the snake has overlaped
-; with its body
-(defn head-overlaps-body? [{[head & body] :body}]
-  (contains? (set body) head))
-
-(defn out-of-bounds? [{[head] :body}]
-  (or (< (head 0) 0)
-      (> (head 0) width)
-      (< (head 1) 0)
-      (> (head 1) height)))
-
-(defn lose? [snake]
-  (or (head-overlaps-body? snake) (out-of-bounds? snake)))
 
 ; function that changes direction
 (defn turn [snake newdir]
@@ -61,14 +46,15 @@
 
 ; function for updating snake's direction
 (defn update-direction [snake newdir]
-  (when newdir (dosync (ref-set direction newdir))))
+  (comment (when newdir (dosync (ref-set direction newdir)))))
 
 ; function for updating positions of snake and apple
 (defn update-positions [snake apple]
   (dosync
     (if (eats? @snake @apple)
-      (do (ref-set apple (create-apple))
-          (alter snake move @direction @apple :grow))
+      (do
+          (alter snake move @direction @apple :grow)
+          )
       (alter snake move @direction @apple)))
   nil)
 
@@ -101,8 +87,10 @@
       (paint g @apple))
     (actionPerformed [e]
       (update-positions snake apple)
+      (dosync
+       (eval routine))
       (when (lose? @snake)
-        (JOptionPane/showMessageDialog frame (str "Game over! Apples eaten: " (:score @snake)))
+        (JOptionPane/showMessageDialog frame (str "Game over! Apples eaten: " @score))
         (reset-game snake apple))
       (when (win? @snake)
         (reset-game snake apple)
@@ -122,6 +110,8 @@
    (ref-set snake (create-snake))
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
+   (ref-set steps 0)
+   (ref-set score 0)
    (let [frame (JFrame. "Snake")
         panel (game-panel frame snake apple)
         timer (Timer. turn-millis panel)]
