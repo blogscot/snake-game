@@ -19,6 +19,21 @@
 (def RIGHT-TURN "Right turn vector" [1 -1])
 (def LEFT-TURN "Left turn vector" [-1 1])
 
+(defn create-apple
+  "Create an apple."
+  []
+  {:location [(rand-int WIDTH) (rand-int HEIGHT)]
+   :color (Color. 210 50 90)
+   :type :apple})
+
+(defn create-snake
+  "Create the snake."
+  []
+  {:body (for [x (range 8 -1 -1)] [x 10])
+   :type :snake
+   :color (Color. 15 160 70)
+   :score 0})
+
 (defn add-points
   "Add vector points."
   [& pts]
@@ -36,25 +51,14 @@
 
 (defn move
   "Move the snake in a given direction."
-  [{:keys [body score] :as snake} dir apple & grow]
+  [{:keys [body] :as snake} dir apple-loc]
   (assoc snake :body (cons (add-points (first body) dir)
-                           (if grow body (butlast body)))
-               :score (if grow (inc score) score)))
-
-(defn create-apple
-  "Create an apple."
-  []
-  {:location [(rand-int WIDTH) (rand-int HEIGHT)]
-   :color (Color. 210 50 90)
-   :type :apple})
-
-(defn create-snake
-  "Create the snake."
-  []
-  {:body (for [x (range 8 -1 -1)] [x 10])
-   :type :snake
-   :color (Color. 15 160 70)
-   :score 0})
+                           (if (eats? snake apple-loc)
+                             (do
+                               (ref-set apple (create-apple))
+                               (ref-set score (inc @score))
+                               body)
+                             (butlast body)))))
 
 (defn out-of-bounds?
   "Check if the snake is out of bounds (wall hit)."
@@ -185,32 +189,20 @@
   []
   (ref-set direction (change-direction @direction RIGHT-TURN))
   (ref-set snake (move @snake @direction @apple))
-  (ref-set steps (inc @steps))
-  (if (eats? @snake @apple)
-    (do
-      (ref-set apple (create-apple))
-      (ref-set score (inc @score)))))
+  (ref-set steps (inc @steps)))
 
 (defn turn-left
   "Make the snake turn left."
   []
   (ref-set direction (change-direction @direction LEFT-TURN))
   (ref-set snake (move @snake @direction @apple))
-  (ref-set steps (inc @steps))
-  (if (eats? @snake @apple)
-    (do
-      (ref-set apple (create-apple))
-      (ref-set score (inc @score)))))
+  (ref-set steps (inc @steps)))
 
 (defn move-forward
   "Make to snake continue forward."
   []
   (ref-set snake (move @snake @direction @apple))
-  (ref-set steps (inc @steps))
-  (if (eats? @snake @apple)
-    (do
-      (ref-set apple (create-apple))
-      (ref-set score (inc @score)))))
+  (ref-set steps (inc @steps)))
 
 ;;;
 ;;; GP functions
@@ -303,53 +295,63 @@
 
 (def routine
   `(if-food-ahead
- (if-food-ahead
-  (if-danger-ahead
-   (if-danger-right (turn-right) (turn-left))
-   (if-food-ahead (move-forward) (move-forward)))
-  (turn-left))
- (if-danger-two-ahead
-  (if-danger-left (move-forward) (turn-left))
-  (if-danger-right (move-forward) (turn-right)))))
+ (if-danger-right
+  (if-food-ahead
+   (if-danger-ahead (turn-left) (move-forward))
+   (if-food-ahead
+    (move-forward)
+    (if-danger-ahead (turn-left) (move-forward))))
+  (if-danger-ahead (move-forward) (move-forward)))
+ (if-danger-left
+  (if-food-ahead
+   (move-forward)
+   (if-danger-left
+    (if-danger-right (move-forward) (turn-right))
+    (if-food-ahead (turn-right) (turn-left))))
+  (do
+   (if-food-ahead (move-forward) (turn-left))
+   (if-food-ahead
+    (if-danger-ahead (move-forward) (move-forward))
+    (if-danger-right (turn-left) (turn-right)))))))
 
 (comment
 
 
   (if-food-ahead
- (if-food-ahead
-  (if-danger-ahead
-   (if-danger-right (turn-right) (turn-left))
-   (if-food-ahead (move-forward) (move-forward)))
-  (turn-left))
- (do
-  (if-danger-left (move-forward) (turn-left))
-  (if-danger-right (move-forward) (turn-right))))
-
-
-  (if-food-ahead
- (do (if-food-ahead (move-forward) (turn-right)) (move-forward))
  (if-danger-right
-  (do (do (move-forward) (move-forward)) (do (turn-left) (turn-left)))
-  (if-danger-right
-   (if-danger-right (turn-right) (turn-left))
-   (if-danger-ahead (turn-left) (turn-right)))))
-
-
-(if-danger-ahead
- (if-danger-ahead (turn-right) (move-forward))
- (if-danger-right (turn-left) (move-forward)))
-
-  (if-danger-left
- (do (move-forward) (turn-right))
- (do (turn-left) (turn-right)))
-
   (if-food-ahead
+   (if-danger-ahead (turn-left) (move-forward))
+   (if-food-ahead
+    (move-forward)
+    (if-danger-ahead (turn-left) (move-forward))))
+  (if-danger-ahead (move-forward) (move-forward)))
  (if-danger-left
-  (if-danger-ahead (turn-left) (turn-left))
-  (move-forward))
- (do
-  (if-danger-right (move-forward) (turn-right))
-  (if-danger-left (turn-right) (turn-left))))
+  (if-food-ahead
+   (move-forward)
+   (if-danger-left
+    (if-danger-right (move-forward) (turn-right))
+    (if-food-ahead (turn-right) (turn-left))))
+  (do
+   (if-food-ahead (move-forward) (turn-left))
+   (if-food-ahead
+    (if-danger-ahead (move-forward) (move-forward))
+    (if-danger-right (turn-left) (turn-right))))))
+
+
+
+  (if-danger-ahead
+ (if-food-ahead
+  (if-danger-left (turn-right) (turn-left))
+  (do
+   (if-danger-right (turn-left) (turn-right))
+   (if-danger-left (move-forward) (turn-left))))
+ (if-food-ahead
+  (move-forward)
+  (if-food-ahead
+   (move-forward)
+   (do
+    (if-danger-left (move-forward) (turn-left))
+    (if-food-ahead (move-forward) (turn-right))))))
 
 
   )

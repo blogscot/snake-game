@@ -86,7 +86,7 @@
       (paint g @snake)
       (paint g @apple))
     (actionPerformed [e]
-      (update-positions snake apple)
+
       (dosync
        (eval routine))
       (when (lose? @snake)
