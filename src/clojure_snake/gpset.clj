@@ -294,64 +294,89 @@
      ~no-moving-down))
 
 (def routine
-  `(if-food-ahead
- (if-danger-right
-  (if-food-ahead
-   (if-danger-ahead (turn-left) (move-forward))
-   (if-food-ahead
-    (move-forward)
-    (if-danger-ahead (turn-left) (move-forward))))
-  (if-danger-ahead (move-forward) (move-forward)))
- (if-danger-left
-  (if-food-ahead
-   (move-forward)
-   (if-danger-left
-    (if-danger-right (move-forward) (turn-right))
-    (if-food-ahead (turn-right) (turn-left))))
-  (do
-   (if-food-ahead (move-forward) (turn-left))
-   (if-food-ahead
-    (if-danger-ahead (move-forward) (move-forward))
-    (if-danger-right (turn-left) (turn-right)))))))
-
-(comment
-
-
-  (if-food-ahead
- (if-danger-right
-  (if-food-ahead
-   (if-danger-ahead (turn-left) (move-forward))
-   (if-food-ahead
-    (move-forward)
-    (if-danger-ahead (turn-left) (move-forward))))
-  (if-danger-ahead (move-forward) (move-forward)))
- (if-danger-left
-  (if-food-ahead
-   (move-forward)
-   (if-danger-left
-    (if-danger-right (move-forward) (turn-right))
-    (if-food-ahead (turn-right) (turn-left))))
-  (do
-   (if-food-ahead (move-forward) (turn-left))
-   (if-food-ahead
-    (if-danger-ahead (move-forward) (move-forward))
-    (if-danger-right (turn-left) (turn-right))))))
-
-
-
-  (if-danger-ahead
- (if-food-ahead
-  (if-danger-left (turn-right) (turn-left))
-  (do
-   (if-danger-right (turn-left) (turn-right))
-   (if-danger-left (move-forward) (turn-left))))
+  `(if-moving-down
  (if-food-ahead
   (move-forward)
   (if-food-ahead
-   (move-forward)
+   (turn-right)
+   (if-moving-left (turn-right) (turn-left))))
+ (if-food-ahead
+  (move-forward)
+  (if-danger-ahead
+   (turn-left)
+   (if-danger-right (move-forward) (turn-right))))))
+
+(comment
+
+  (if-moving-down
+ (if-food-ahead
+  (move-forward)
+  (if-food-ahead
+   (turn-right)
+   (if-moving-left (turn-right) (turn-left))))
+ (if-food-ahead
+  (move-forward)
+  (if-danger-ahead
+   (turn-left)
+   (if-danger-right (move-forward) (turn-right)))))
+
+
+(if-food-ahead
+ (if-food-ahead
+  (if-danger-ahead
+   (if-danger-left
+    (if-danger-right (move-forward) (turn-right))
+    (if-food-ahead
+     (do (move-forward) (move-forward))
+     (if-danger-left (move-forward) (turn-left))))
+   (if-danger-ahead
+    (if-food-ahead (turn-right) (turn-left))
+    (if-danger-left (move-forward) (move-forward))))
+  (if-danger-left
+   (if-danger-left
+    (if-danger-left
+     (if-danger-right (move-forward) (turn-right))
+     (if-danger-left (turn-left) (turn-right)))
+    (move-forward))
    (do
-    (if-danger-left (move-forward) (turn-left))
-    (if-food-ahead (move-forward) (turn-right))))))
+    (if-food-ahead
+     (do (move-forward) (turn-left))
+     (if-danger-left (move-forward) (turn-left)))
+    (move-forward))))
+ (if-food-ahead
+  (if-food-ahead
+   (if-food-ahead
+    (if-danger-ahead (turn-left) (move-forward))
+    (if-danger-right (turn-left) (turn-right)))
+   (turn-right))
+  (if-danger-left
+   (if-danger-right (move-forward) (turn-right))
+   (do
+    (if-food-ahead
+     (do (move-forward) (turn-left))
+     (if-danger-left (move-forward) (turn-left)))
+    (if-food-ahead
+     (if-danger-ahead (turn-left) (move-forward))
+     (if-danger-right (turn-left) (turn-right)))))))
+
+
+  (if-food-right
+ (if-danger-two-ahead
+  (if-moving-up
+   (if-food-up (turn-right) (turn-left))
+   (if-food-ahead (move-forward) (turn-left)))
+  (if-food-right (move-forward) (turn-left)))
+ (if-moving-up
+  (if-food-up
+   (if-moving-up
+    (if-moving-up (move-forward) (move-forward))
+    (if-food-right (turn-right) (move-forward)))
+   (if-danger-two-ahead
+    (if-moving-right (turn-right) (turn-left))
+    (if-moving-up (turn-left) (turn-left))))
+  (if-moving-left
+   (if-food-up (turn-right) (move-forward))
+   (if-food-right (turn-right) (turn-left)))))
 
 
   )
