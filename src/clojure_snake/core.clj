@@ -13,7 +13,7 @@
 (def width 19)
 (def height 10)
 (def point-size 25)
-(def turn-millis 150)
+(def turn-millis 30)
 (def win-length 211)
 (def dirs {VK_LEFT  [-1 0]
            VK_RIGHT [1 0]
