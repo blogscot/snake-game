@@ -13,7 +13,7 @@
 (def width 19)
 (def height 10)
 (def point-size 25)
-(def turn-millis 30)
+(def turn-millis 100)
 (def win-length 211)
 (def dirs {VK_LEFT  [-1 0]
            VK_RIGHT [1 0]
@@ -46,16 +46,12 @@
 
 ; function for updating snake's direction
 (defn update-direction [snake newdir]
-  (comment (when newdir (dosync (ref-set direction newdir)))))
+  (when newdir (dosync (ref-set direction newdir))))
 
 ; function for updating positions of snake and apple
 (defn update-positions [snake apple]
   (dosync
-    (if (eats? @snake @apple)
-      (do
-          (alter snake move @direction @apple :grow)
-          )
-      (alter snake move @direction @apple)))
+   (alter snake move @direction @apple))
   nil)
 
 ; ---------------------------------------------------------------------
@@ -79,7 +75,7 @@
     (fill-point g point color)))
 
 ; game panel
-(defn game-panel [frame snake apple]
+(defn game-panel [frame snake apple & rtn]
   (proxy [JPanel ActionListener KeyListener] []
     (paintComponent [g]
       (proxy-super paintComponent g)
@@ -87,8 +83,11 @@
       (paint g @apple))
     (actionPerformed [e]
 
-      (dosync
-       (eval routine))
+      (if (nil? rtn)
+        (update-positions snake apple)
+        (dosync
+         (eval rtn)))
+
       (when (lose? @snake)
         (JOptionPane/showMessageDialog frame (str "Game over! Apples eaten: " @score))
         (reset-game snake apple))
@@ -105,7 +104,7 @@
     (keyTyped [e])))
 
 ; main game function
-(defn game []
+(defn game [& rtn]
   (dosync
    (ref-set snake (create-snake))
    (ref-set apple (create-apple))
@@ -113,7 +112,7 @@
    (ref-set steps 0)
    (ref-set score 0)
    (let [frame (JFrame. "Snake")
-        panel (game-panel frame snake apple)
+        panel (game-panel frame snake apple rtn)
         timer (Timer. turn-millis panel)]
     (doto panel
       (.setFocusable true)
