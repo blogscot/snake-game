@@ -9,6 +9,7 @@
 (def direction (ref {}))
 (def steps (ref {}))
 (def score (ref {}))
+(def snake-routine (ref {}))
 
 (def WIDTH "Width of the game board" 19)
 (def HEIGHT "Height of the game board" 10)
@@ -18,6 +19,11 @@
 (def DOWN "Down direction" [0 1])
 (def RIGHT-TURN "Right turn vector" [1 -1])
 (def LEFT-TURN "Left turn vector" [-1 1])
+
+(defn set-routine
+  [routine]
+  (dosync
+   (ref-set snake-routine routine)))
 
 (defn create-apple
   "Create an apple."
@@ -293,7 +299,7 @@
      ~moving-down
      ~no-moving-down))
 
-(def routine
+(def routine-test
   `(if-danger-ahead
  (if-danger-ahead
   (if-danger-two-ahead

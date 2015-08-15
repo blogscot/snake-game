@@ -20,6 +20,8 @@
            VK_UP    [0 -1]
            VK_DOWN  [0 1]})
 
+(def routine (ref {}))
+
 (defn point-to-screen-rect [pt]
   (map #(* point-size %)
        [(pt 0) (pt 1) 1 1]))
@@ -75,7 +77,7 @@
     (fill-point g point color)))
 
 ; game panel
-(defn game-panel [frame snake apple & rtn]
+(defn game-panel [frame snake apple]
   (proxy [JPanel ActionListener KeyListener] []
     (paintComponent [g]
       (proxy-super paintComponent g)
@@ -83,10 +85,13 @@
       (paint g @apple))
     (actionPerformed [e]
 
-      (if (nil? rtn)
-        (update-positions snake apple)
-        (dosync
-         (eval rtn)))
+      (if (nil? @snake-routine)
+        (do
+          ;(str (println "nil routine" @routine))
+          (update-positions snake apple))
+        (do
+          ;(str (println "routine " @routine))
+          (dosync (eval @snake-routine))))
 
       (when (lose? @snake)
         (JOptionPane/showMessageDialog frame (str "Game over! Apples eaten: " @score))
@@ -96,7 +101,8 @@
         (JOptionPane/showMessageDialog frame "You win!"))
       (.repaint this))
     (keyPressed [e]
-      (update-direction snake (dirs (.getKeyCode e))))
+      (if (nil? @snake-routine)
+        (update-direction snake (dirs (.getKeyCode e)))))
     (getPreferredSize []
       (Dimension. (* (inc width) point-size)
                   (* (inc height) point-size)))
@@ -104,15 +110,16 @@
     (keyTyped [e])))
 
 ; main game function
-(defn game [& rtn]
+(defn game []
   (dosync
    (ref-set snake (create-snake))
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
    (ref-set steps 0)
    (ref-set score 0)
+   ;(ref-set snake-routine rtn)
    (let [frame (JFrame. "Snake")
-        panel (game-panel frame snake apple rtn)
+        panel (game-panel frame snake apple)
         timer (Timer. turn-millis panel)]
     (doto panel
       (.setFocusable true)
