@@ -6,7 +6,7 @@
            (java.awt.event ActionListener KeyListener))
   (:use clojure-snake.util.import-static)
   (:use clojure-snake.gpset))
-(import-static java.awt.event.KeyEvent VK_LEFT VK_RIGHT VK_UP VK_DOWN)
+(import-static java.awt.event.KeyEvent VK_LEFT VK_RIGHT VK_UP VK_DOWN VK_E VK_ESCAPE)
 
 ; ---------------------------------------------------------------------
 ; functional model
@@ -102,6 +102,13 @@
   (doseq [point body]
     (fill-point g point color)))
 
+(defn destroy-snake
+  []
+  {:body '([-10 -10])
+   :type :snake
+   :color (Color. 15 160 70)
+   :score 0})
+
 ; game panel
 (defn game-panel [frame snake apple]
   (proxy [JPanel ActionListener KeyListener] []
@@ -140,7 +147,10 @@
       (.repaint this))
     (keyPressed [e]
       (if (nil? @routine)
-        (update-direction snake (dirs (.getKeyCode e)))))
+        (update-direction snake (dirs (.getKeyCode e))))
+      (if (or (= (.getKeyCode e) VK_E) (= (.getKeyCode e) VK_ESCAPE))
+        (dosync
+         (ref-set snake (destroy-snake)))))
     (getPreferredSize []
       (Dimension. (* (inc width) point-size)
                   (* (inc height) point-size)))
@@ -157,7 +167,7 @@
    (ref-set score 0)
    (ref-set routine (if ((complement nil?) rtn)
                       (setup-routine rtn "clojure-snake.gpset/" "(")))
-   (let [frame (JFrame. "Snake")
+   (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game)")
         panel (game-panel frame snake apple)
         timer (Timer. (- turn-millis speed) panel)]
     (doto panel
@@ -168,7 +178,7 @@
       (.pack)
       (.setVisible true)
       (.setResizable false)
-      (.setDefaultCloseOperation WindowConstants/DISPOSE_ON_CLOSE))
+      (.setDefaultCloseOperation WindowConstants/DO_NOTHING_ON_CLOSE))
     (.start timer)
     (str [snake, apple, timer]))))
 
