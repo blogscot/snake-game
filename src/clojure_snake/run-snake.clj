@@ -33,5 +33,5 @@
      (if-moving-right (move-forward) (turn-right))
      (if-moving-right (turn-left) (move-forward)))))))")
 
-(game nil 50)
+(game rtn 50)
 
