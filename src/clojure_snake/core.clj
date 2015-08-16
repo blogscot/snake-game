@@ -134,7 +134,7 @@
     (keyTyped [e])))
 
 ; main game function
-(defn game [rtn]
+(defn game [rtn speed]
   (dosync
    (ref-set snake (create-snake))
    (ref-set apple (create-apple))
@@ -145,7 +145,7 @@
                       (setup-routine rtn "clojure-snake.gpset/" "(")))
    (let [frame (JFrame. "Snake")
         panel (game-panel frame snake apple)
-        timer (Timer. turn-millis panel)]
+        timer (Timer. (- turn-millis speed) panel)]
     (doto panel
       (.setFocusable true)
       (.addKeyListener panel))
