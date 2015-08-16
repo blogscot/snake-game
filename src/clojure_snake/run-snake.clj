@@ -33,5 +33,5 @@
      (if-moving-right (move-forward) (turn-right))
      (if-moving-right (turn-left) (move-forward)))))))")
 
-(println (setup-routine rtn "clojure-snake.gpset/" "("))
+(game rtn)
 

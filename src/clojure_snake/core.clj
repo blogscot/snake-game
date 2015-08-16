@@ -12,7 +12,7 @@
 ; constants to describe time, space and motion
 (def width 19)
 (def height 10)
-(def point-size 25)
+(def point-size 50)
 (def turn-millis 100)
 (def win-length 211)
 (def dirs {VK_LEFT  [-1 0]
@@ -141,7 +141,8 @@
    (ref-set direction RIGHT)
    (ref-set steps 0)
    (ref-set score 0)
-   (ref-set routine (setup-routine rtn "clojure-snake.gpset/" "("))
+   (ref-set routine (if ((complement nil?) rtn)
+                      (setup-routine rtn "clojure-snake.gpset/" "(")))
    (let [frame (JFrame. "Snake")
         panel (game-panel frame snake apple)
         timer (Timer. turn-millis panel)]
