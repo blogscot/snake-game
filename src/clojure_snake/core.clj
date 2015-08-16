@@ -156,9 +156,9 @@
       (.pack)
       (.setVisible true)
       (.setResizable false)
-      (.setDefaultCloseOperation WindowConstants/EXIT_ON_CLOSE))
+      (.setDefaultCloseOperation WindowConstants/DISPOSE_ON_CLOSE))
     (.start timer)
-    [snake, apple, timer])))
+    (str [snake, apple, timer]))))
 
 (defn -game
   [rtn speed]
