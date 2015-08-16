@@ -6,7 +6,7 @@
            (java.awt.event ActionListener KeyListener))
   (:use clojure-snake.util.import-static)
   (:use clojure-snake.gpset))
-(import-static java.awt.event.KeyEvent VK_LEFT VK_RIGHT VK_UP VK_DOWN VK_E VK_ESCAPE)
+(import-static java.awt.event.KeyEvent VK_LEFT VK_RIGHT VK_UP VK_DOWN VK_E VK_ESCAPE VK_P)
 
 ; ---------------------------------------------------------------------
 ; functional model
@@ -23,6 +23,7 @@
            VK_DOWN  [0 1]})
 
 (def routine (ref {}))
+(def pause? (ref false))
 
 (defn point-to-screen-rect [pt]
   (map #(* point-size %)
@@ -45,7 +46,8 @@
           (ref-set apple (create-apple))
           (ref-set direction RIGHT)
           (ref-set steps 0)
-          (ref-set score 0))
+          (ref-set score 0)
+          (ref-set pause? false))
   nil)
 
 ; function for updating snake's direction
@@ -118,21 +120,22 @@
       (paint g @apple))
     (actionPerformed [e]
 
-      (if (nil? @routine)
-        (do
-          ;(str (println "nil routine" @routine))
-          (update-positions snake apple))
-        (do
-          ;(str (println "routine " @routine))
-          (dosync (try
-                    (eval (read-string @routine))
-                    (catch Exception ex
-                      (do
-                        (JOptionPane/showMessageDialog frame
-                        "There is an error in control routine. Check the documentation to see how to form a valid control routine."
-                        "Control routine error" JOptionPane/ERROR_MESSAGE)
-                        (.stop (.getSource e))
-                        (.dispose frame)))))))
+      (if (= @pause? false)
+        (if (nil? @routine)
+          (do
+            ;(str (println "nil routine" @routine))
+            (update-positions snake apple))
+          (do
+            ;(str (println "routine " @routine))
+            (dosync (try
+                      (eval (read-string @routine))
+                      (catch Exception ex
+                        (do
+                          (JOptionPane/showMessageDialog frame
+                          "There is an error in control routine. Check the documentation to see how to form a valid control routine."
+                          "Control routine error" JOptionPane/ERROR_MESSAGE)
+                          (.stop (.getSource e))
+                          (.dispose frame))))))))
 
       (if (lose? @snake)
         (if (= JOptionPane/YES_OPTION (JOptionPane/showConfirmDialog frame (str "Apples eaten: " @score "\n Play again?") "Game over!" JOptionPane/YES_NO_OPTION))
@@ -150,7 +153,10 @@
         (update-direction snake (dirs (.getKeyCode e))))
       (if (or (= (.getKeyCode e) VK_E) (= (.getKeyCode e) VK_ESCAPE))
         (dosync
-         (ref-set snake (destroy-snake)))))
+         (ref-set snake (destroy-snake))))
+       (if (or (= (.getKeyCode e) VK_P))
+        (dosync
+         (ref-set pause? (not @pause?)))))
     (getPreferredSize []
       (Dimension. (* (inc width) point-size)
                   (* (inc height) point-size)))
@@ -167,7 +173,7 @@
    (ref-set score 0)
    (ref-set routine (if ((complement nil?) rtn)
                       (setup-routine rtn "clojure-snake.gpset/" "(")))
-   (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game)")
+   (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game, press P to toogle pause)")
         panel (game-panel frame snake apple)
         timer (Timer. (- turn-millis speed) panel)]
     (doto panel
