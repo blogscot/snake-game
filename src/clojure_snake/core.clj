@@ -119,9 +119,13 @@
           ;(str (println "routine " @routine))
           (dosync (eval (read-string @routine)))))
 
-      (when (lose? @snake)
-        (JOptionPane/showMessageDialog frame (str "Game over! Apples eaten: " @score))
-        (reset-game snake apple))
+      (if (lose? @snake)
+        (if (= JOptionPane/YES_OPTION (JOptionPane/showConfirmDialog frame (str "Apples eaten: " @score "\n Play again?") "Game over!" JOptionPane/YES_NO_OPTION))
+          (reset-game snake apple)
+          (do
+            ;(.removeActionListener (.getSource e) this)
+            (.stop (.getSource e))
+            (.dispose frame))))
       (when (win? @snake)
         (reset-game snake apple)
         (JOptionPane/showMessageDialog frame "You win!"))
