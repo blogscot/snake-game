@@ -1,4 +1,6 @@
 (ns clojure-snake.core
+  (:gen-class
+   :methods [#^{:static true} [game [String int] String]])
   (:import (java.awt Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
            (java.awt.event ActionListener KeyListener))
@@ -157,3 +159,7 @@
       (.setDefaultCloseOperation WindowConstants/EXIT_ON_CLOSE))
     (.start timer)
     [snake, apple, timer])))
+
+(defn -game
+  [rtn speed]
+  (game rtn speed))
