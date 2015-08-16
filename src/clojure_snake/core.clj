@@ -117,7 +117,15 @@
           (update-positions snake apple))
         (do
           ;(str (println "routine " @routine))
-          (dosync (eval (read-string @routine)))))
+          (dosync (try
+                    (eval (read-string @routine))
+                    (catch Exception ex
+                      (do
+                        (JOptionPane/showMessageDialog frame
+                        "There is an error in control routine. Check the documentation to see how to form a valid control routine."
+                        "Control routine error" JOptionPane/ERROR_MESSAGE)
+                        (.stop (.getSource e))
+                        (.dispose frame)))))))
 
       (if (lose? @snake)
         (if (= JOptionPane/YES_OPTION (JOptionPane/showConfirmDialog frame (str "Apples eaten: " @score "\n Play again?") "Game over!" JOptionPane/YES_NO_OPTION))
