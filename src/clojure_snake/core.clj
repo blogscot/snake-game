@@ -63,26 +63,9 @@
 ; ---------------------------------------------------------------------
 ; util
 ; ---------------------------------------------------------------------
-(defn insert-into-string
-  [string new index]
-  (if ((complement neg?) index)
-    (str (subs string 0 index) new (subs string index))
-    string))
-
-(defn find-index-of-char
-  [string charc start]
-  (let [index (.indexOf string charc start)]
-    (if (> index -1)
-      (inc index)
-      index)))
-
 (defn setup-routine
-  [string new-string crit]
-  (loop [res string index 0]
-    (if (< index 0)
-      res
-      (recur (insert-into-string res new-string (find-index-of-char res crit index))
-             (find-index-of-char res crit (inc index))))))
+  [string]
+  (clojure.string/replace string (re-pattern "\\((?!do)") "(clojure-snake.gpset/"))
 
 ; ---------------------------------------------------------------------
 ; gui
@@ -172,7 +155,7 @@
    (ref-set steps 0)
    (ref-set score 0)
    (ref-set routine (if ((complement nil?) rtn)
-                      (setup-routine rtn "clojure-snake.gpset/" "(")))
+                      (setup-routine rtn)))
    (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game, press P to toogle pause)")
         panel (game-panel frame snake apple)
         timer (Timer. (- turn-millis speed) panel)]
