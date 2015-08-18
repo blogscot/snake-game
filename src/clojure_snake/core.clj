@@ -1,4 +1,5 @@
 (ns clojure-snake.core
+  (:require [clojure.tools.cli :refer [parse-opts]])
   (:gen-class
    :methods [#^{:static true} [game [String int] String]])
   (:import (java.awt Color Dimension)
@@ -174,3 +175,19 @@
 (defn -game
   [rtn speed]
   (game rtn speed))
+
+(def cli-options
+  ;; An option with a required argument
+  [["-r" "--routine ROUTINE" "Control routine"
+    :id :routine
+    :default ""]
+   ["-s" "--speed SPEED" "Snake speed"
+    :default 25
+    :id :speed
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 50) "Must be a number between 0 and 50"]]])
+
+(defn -main
+  [& args]
+  (let [opts (parse-opts args cli-options)]
+    (game (if (= "" (:routine (:options opts))) nil (str (:routine (:options opts)))) (:speed (:options opts)))))
