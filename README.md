@@ -29,6 +29,8 @@ The project can also be used as a library and all you need to do is to include t
 (game "" 25)
 ```
 
+![Playing](https://raw.githubusercontent.com/somi92/clojure-snake/master/resources/snake1.png?raw=true "Playing")
+
 ## Bugs
 
 The project contains a bug regarding the drawing of the snake while moving on the board. The snake seems to skip positions while moving, it doesn't go square by square as expected. But when the player turns the snake and holds down the direction key it starts to behave normally and moves square by square, as soon as the key is released it starts skipping again.
