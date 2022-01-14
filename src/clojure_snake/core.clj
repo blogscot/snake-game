@@ -6,14 +6,12 @@
   (:import (java.awt Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
            (java.awt.event ActionListener KeyListener KeyEvent))
-  (:require [clojure-snake.gpset :refer [create-snake create-apple direction steps score RIGHT LEFT UP DOWN move snake apple game-over?]]))
+  (:require [clojure-snake.gpset :refer [create-snake create-apple direction steps score WIDTH HEIGHT RIGHT LEFT UP DOWN move snake apple game-over?]]))
 
 ; ---------------------------------------------------------------------
 ; functional model
 ; ---------------------------------------------------------------------
 ; constants to describe time, space and motion
-(def width 50)
-(def height 30)
 (def point-size 15)
 (def turn-millis 400)
 (def win-length 50)
@@ -32,10 +30,6 @@
 
 (defn player-win? [{body :body}] (>= (count body) win-length))
 
-; function that changes direction
-(defn turn [snake newdir]
-  (assoc snake :dir newdir))
-
 ; ---------------------------------------------------------------------
 ; mutable model
 ; ---------------------------------------------------------------------
@@ -49,22 +43,21 @@
           (ref-set pause? false))
   nil)
 
-; function for updating snake's direction
-(defn update-direction [snake newdir]
-  (when newdir (dosync (ref-set direction newdir))))
+(= DOWN (map #(* % -1) DOWN))
+
+(defn update-snake-direction
+  "Updates the direction of the snake. Prevents reversing
+   head into body which would terminate game."
+  [newdir]
+  (let [reverse-dir? (fn [dir] (= dir (map #(* -1 %) @direction)))]
+    (when (not (reverse-dir? newdir))
+      (dosync (ref-set direction newdir)))))
 
 ; function for updating positions of snake and apple
 (defn update-positions [snake apple]
   (dosync
    (alter snake move @direction @apple))
   nil)
-
-; ---------------------------------------------------------------------
-; util
-; ---------------------------------------------------------------------
-(defn setup-routine
-  [string]
-  (clojure.string/replace string (re-pattern "\\((?!do)") "(clojure-snake.gpset/"))
 
 ; ---------------------------------------------------------------------
 ; gui
@@ -93,19 +86,6 @@
    :color (Color. 15 160 70)
    :score 0})
 
-(defn update-game [frame e]
-  (if (empty? @routine)
-    (update-positions snake apple)
-    (dosync (try
-              (eval (read-string @routine))
-              (catch Exception _ex
-                (do
-                  (JOptionPane/showMessageDialog frame
-                                                 "There is an error in control routine. Check the documentation to see how to form a valid control routine."
-                                                 "Control routine error" JOptionPane/ERROR_MESSAGE)
-                  (.stop (.getSource e))
-                  (.dispose frame)))))))
-
 (defn prompt-play-again [frame e]
   (if (= JOptionPane/YES_OPTION
          (JOptionPane/showConfirmDialog
@@ -114,7 +94,6 @@
           JOptionPane/YES_NO_OPTION))
     (reset-game snake apple)
     (do
-            ;(.removeActionListener (.getSource e) this)
       (.stop (.getSource e))
       (.dispose frame))))
 
@@ -126,7 +105,7 @@
       (paint g @apple))
     (actionPerformed [e]
       (when (false? @pause?)
-        (update-game frame e))
+        (update-positions snake apple))
       (when (game-over? @snake)
         (prompt-play-again frame e))
       (when (player-win? @snake)
@@ -134,31 +113,29 @@
         (JOptionPane/showMessageDialog frame "You win!"))
       (.repaint this))
     (keyPressed [e]
-      (let [key-code (.getKeyCode e)]
-        (when (empty? @routine)
-          (update-direction snake (dirs key-code)))
-        (when (or (= key-code KeyEvent/VK_E) (= key-code KeyEvent/VK_ESCAPE))
+      (let [keycode (.getKeyCode e)]
+        (update-snake-direction (dirs keycode))
+        (when (or (= keycode KeyEvent/VK_E) (= keycode KeyEvent/VK_ESCAPE))
           (dosync
            (ref-set snake (destroy-snake))))
-        (when (= key-code KeyEvent/VK_P)
+        (when (= keycode KeyEvent/VK_P)
           (dosync
            (ref-set pause? (not @pause?))))))
     (getPreferredSize []
-      (Dimension. (* (inc width) point-size)
-                  (* (inc height) point-size)))
+      (Dimension. (* (inc WIDTH) point-size)
+                  (* (inc HEIGHT) point-size)))
     (keyReleased [e])
     (keyTyped [e])))
 
 ; main game function
-(defn game [rtn speed]
+(defn game [speed]
   (dosync
    (ref-set snake (create-snake))
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
    (ref-set steps 0)
    (ref-set score 0)
-   (ref-set routine (when (seq rtn)
-                      (setup-routine rtn)))
+
    (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game, press P to toggle pause)")
          panel (game-panel frame snake apple)
          timer (Timer. (- turn-millis (* 10 speed)) panel)]
@@ -180,10 +157,7 @@
 
 (def cli-options
   ;; An option with a required argument
-  [["-r" "--routine ROUTINE" "Control routine"
-    :id :routine
-    :default ""]
-   ["-s" "--speed SPEED" "Snake speed"
+  [["-s" "--speed SPEED" "Snake speed"
     :default 25
     :id :speed
     :parse-fn #(Integer/parseInt %)
@@ -192,5 +166,5 @@
 (defn -main
   [& args]
   (let [opts (parse-opts args cli-options)
-        {:keys [routine speed]} (:options opts)]
-    (game routine speed)))
+        {:keys [speed]} (:options opts)]
+    (game speed)))
