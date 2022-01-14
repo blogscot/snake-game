@@ -1,8 +1,5 @@
 (ns clojure-snake.gpset
-  (:import (java.awt Color Dimension)
-           (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
-           (java.awt.event ActionListener KeyListener))
-  (:use clojure-snake.util.import-static))
+  (:import (java.awt Color)))
 
 (def snake (ref {}))
 (def apple (ref {}))
@@ -11,8 +8,8 @@
 (def score (ref {}))
 (def snake-routine (ref {}))
 
-(def WIDTH "Width of the game board" 19)
-(def HEIGHT "Height of the game board" 10)
+(def WIDTH "Width of the game board" 50)
+(def HEIGHT "Height of the game board" 30)
 (def LEFT "Left direction" [-1 0])
 (def RIGHT "Right direction" [1 0])
 (def UP "Up direction" [0 -1])
@@ -40,7 +37,7 @@
    :color (Color. 15 160 70)
    :score 0})
 
-(defn add-points
+(defn calc-new-head
   "Add vector points."
   [& pts]
   (vec (apply map + pts)))
@@ -58,7 +55,7 @@
 (defn move
   "Move the snake in a given direction."
   [{:keys [body] :as snake} dir apple-loc]
-  (assoc snake :body (cons (add-points (first body) dir)
+  (assoc snake :body (cons (calc-new-head (first body) dir)
                            (if (eats? snake apple-loc)
                              (do
                                (ref-set apple (create-apple))
@@ -79,13 +76,8 @@
   [{[head & body] :body}]
   (contains? (set body) head))
 
-(defn lose? [snake]
+(defn game-over? [snake]
   (or (head-overlaps-body? snake) (out-of-bounds? snake)))
-
-(defn change-direction
-  "Change direction of the snake."
-  [old-dir turn]
-  (vec (reverse (map * old-dir turn))))
 
 ;;;
 ;;; Util
@@ -96,15 +88,15 @@
   (let [x-head (first head) y-head (last head)
         x-apple (first apple) y-apple (last apple)]
     (cond
-     (= dir UP) (if (and (= x-head x-apple) (> y-head y-apple)) true false)
-     (= dir DOWN) (if (and (= x-head x-apple) (< y-head y-apple)) true false)
-     (= dir LEFT) (if (and (= y-head y-apple) (> x-head x-apple)) true false)
-     (= dir RIGHT) (if (and (= y-head y-apple) (< x-head x-apple)) true false))))
+      (= dir UP) (if (and (= x-head x-apple) (> y-head y-apple)) true false)
+      (= dir DOWN) (if (and (= x-head x-apple) (< y-head y-apple)) true false)
+      (= dir LEFT) (if (and (= y-head y-apple) (> x-head x-apple)) true false)
+      (= dir RIGHT) (if (and (= y-head y-apple) (< x-head x-apple)) true false))))
 
 (defn danger-ahead?
   "Check if position ahead of current snake's direction is occupied by a wall or snake segment."
   [{[head] :body :as snake} dir]
-  (let [next-pos (add-points head dir)]
+  (let [next-pos (calc-new-head head dir)]
     (if (or (out-of-bounds? {:body (list next-pos)}) (head-overlaps-body? {:body (conj (:body snake) next-pos)}))
       true
       false)))
@@ -112,7 +104,7 @@
 (defn danger-right?
   "Check if position to the right of current snake's direction is occupied by a wall or snake segment."
   [{[head] :body :as snake} dir]
-  (let [next-pos (add-points head (change-direction dir RIGHT-TURN))]
+  (let [next-pos (calc-new-head head (change-direction dir RIGHT-TURN))]
     (if (or (out-of-bounds? {:body (list next-pos)}) (head-overlaps-body? {:body (conj (:body snake) next-pos)}))
       true
       false)))
@@ -120,7 +112,7 @@
 (defn danger-left?
   "Check if position to the left of current snake's direction is occupied by a wall or snake segment."
   [{[head] :body :as snake} dir]
-  (let [next-pos (add-points head (change-direction dir LEFT-TURN))]
+  (let [next-pos (calc-new-head head (change-direction dir LEFT-TURN))]
     (if (or (out-of-bounds? {:body (list next-pos)}) (head-overlaps-body? {:body (conj (:body snake) next-pos)}))
       true
       false)))
@@ -128,7 +120,7 @@
 (defn danger-two-ahead?
   "Check if position two steps ahead of current snake's direction is occupied by a wall or snake segment."
   [{[head] :body :as snake} dir]
-  (let [next-pos (add-points (add-points head dir) dir)]
+  (let [next-pos (calc-new-head (calc-new-head head dir) dir)]
     (if (or (out-of-bounds? {:body (list next-pos)}) (head-overlaps-body? {:body (conj (:body snake) next-pos)}))
       true
       false)))
