@@ -1,12 +1,25 @@
 (ns clojure-snake.core
   (:require [clojure.tools.cli :refer [parse-opts]])
-  (:require [clojure.string :as str])
-  (:gen-class
-   :methods [^{:static true} [game [String int] String]])
+  (:gen-class)
   (:import (java.awt Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
-           (java.awt.event ActionListener KeyListener KeyEvent))
-  (:require [clojure-snake.gpset :refer [create-snake create-apple direction steps score WIDTH HEIGHT RIGHT LEFT UP DOWN move snake apple game-over?]]))
+           (java.awt.event ActionListener KeyListener KeyEvent)))
+
+(def snake (ref {}))
+(def apple (ref {}))
+(def direction (ref {}))
+(def steps (ref {}))
+(def score (ref {}))
+(def pause? (ref false))
+
+(def WIDTH "Width of the game board" 50)
+(def HEIGHT "Height of the game board" 30)
+(def LEFT "Left direction" [-1 0])
+(def RIGHT "Right direction" [1 0])
+(def UP "Up direction" [0 -1])
+(def DOWN "Down direction" [0 1])
+(def GREEN (Color. 15 160 70))
+(def RED (Color. 210 50 90))
 
 ; ---------------------------------------------------------------------
 ; functional model
@@ -20,15 +33,20 @@
            KeyEvent/VK_UP UP
            KeyEvent/VK_DOWN DOWN})
 
-(def routine (ref {}))
-(def pause? (ref false))
+(defn create-apple
+  "Create an apple."
+  []
+  {:location [(rand-int WIDTH) (rand-int HEIGHT)]
+   :color RED
+   :type :apple})
 
-(defn point-to-screen-rect
-  "Returns the origin x, y plus dx and dy needed
-   to draw a square of size point."
-  [[x y]] (map #(* point-size %) [x y 1 1]))
-
-(defn player-win? [{body :body}] (>= (count body) win-length))
+(defn create-snake
+  "Create the snake."
+  []
+  {:body (for [x (range 8 -1 -1)] [x 10])
+   :type :snake
+   :color GREEN
+   :score 0})
 
 ; ---------------------------------------------------------------------
 ; mutable model
@@ -43,7 +61,51 @@
           (ref-set pause? false))
   nil)
 
-(= DOWN (map #(* % -1) DOWN))
+(defn calc-new-head
+  "Add vector points."
+  [& pts]
+  (vec (apply map + pts)))
+
+(defn eats?
+  "Check if the snake eats an apple."
+  [{[snake-head] :body} {apple :location}]
+  (= snake-head apple))
+
+(defn move
+  "Move the snake in a given direction."
+  [{:keys [body] :as snake} dir apple-loc]
+  (assoc snake :body (cons (calc-new-head (first body) dir)
+                           (if (eats? snake apple-loc)
+                             (do
+                               (ref-set apple (create-apple))
+                               (ref-set score (inc @score))
+                               body)
+                             (butlast body)))))
+
+(defn out-of-bounds?
+  "Check if the snake is out of bounds (wall hit)."
+  [{[head] :body}]
+  (or (< (head 0) 0)
+      (> (head 0) WIDTH)
+      (< (head 1) 0)
+      (> (head 1) HEIGHT)))
+
+(defn head-overlaps-body?
+  "Check if the snake has collided with itself."
+  [{[head & body] :body}]
+  (contains? (set body) head))
+
+(defn game-over? [snake]
+  (or (head-overlaps-body? snake) (out-of-bounds? snake)))
+
+(defn point-to-screen-rect
+  "Returns the origin x, y plus dx and dy needed
+   to draw a square of size point."
+  [[x y]] (map #(* point-size %) [x y 1 1]))
+
+(defn player-win? [{body :body}] (>= (count body) win-length))
+
+
 
 (defn update-snake-direction
   "Updates the direction of the snake. Prevents reversing
@@ -63,8 +125,8 @@
 ; gui
 ; ---------------------------------------------------------------------
 ; function for making a point on the screen
-(defn fill-point [g pt color]
-  (let [[x y width height] (point-to-screen-rect pt)]
+(defn fill-point [^java.awt.Graphics g pt ^java.awt.Color color]
+  (let [[^int x ^int y ^int width ^int height] (point-to-screen-rect pt)]
     (.setColor g color)
     (.fillRect g x y width height)))
 
@@ -79,18 +141,11 @@
   (doseq [point body]
     (fill-point g point color)))
 
-(defn destroy-snake
-  []
-  {:body '([-10 -10])
-   :type :snake
-   :color (Color. 15 160 70)
-   :score 0})
-
-(defn prompt-play-again [frame e]
+(defn prompt-play-again [frame e msg]
   (if (= JOptionPane/YES_OPTION
          (JOptionPane/showConfirmDialog
           frame (str "Apples eaten: " @score "\n Play again?")
-          "Game over!"
+          msg
           JOptionPane/YES_NO_OPTION))
     (reset-game snake apple)
     (do
@@ -107,27 +162,29 @@
       (when (false? @pause?)
         (update-positions snake apple))
       (when (game-over? @snake)
-        (prompt-play-again frame e))
+        (prompt-play-again frame e "Game Over!"))
       (when (player-win? @snake)
         (reset-game snake apple)
         (JOptionPane/showMessageDialog frame "You win!"))
-      (.repaint this))
+      (when (some? this)
+        (.repaint this)))
     (keyPressed [e]
       (let [keycode (.getKeyCode e)]
-        (update-snake-direction (dirs keycode))
-        (when (or (= keycode KeyEvent/VK_E) (= keycode KeyEvent/VK_ESCAPE))
-          (dosync
-           (ref-set snake (destroy-snake))))
-        (when (= keycode KeyEvent/VK_P)
-          (dosync
-           (ref-set pause? (not @pause?))))))
+        (cond
+          (or (= keycode KeyEvent/VK_LEFT)
+              (= keycode KeyEvent/VK_RIGHT)
+              (= keycode KeyEvent/VK_UP)
+              (= keycode KeyEvent/VK_DOWN)) (update-snake-direction (dirs keycode))
+          (or (= keycode KeyEvent/VK_E)
+              (= keycode KeyEvent/VK_ESCAPE)) (System/exit 0)
+          (= keycode KeyEvent/VK_P) (dosync
+                                     (ref-set pause? (not @pause?))))))
     (getPreferredSize []
       (Dimension. (* (inc WIDTH) point-size)
                   (* (inc HEIGHT) point-size)))
     (keyReleased [e])
     (keyTyped [e])))
 
-; main game function
 (defn game [speed]
   (dosync
    (ref-set snake (create-snake))
@@ -147,13 +204,9 @@
        (.pack)
        (.setVisible true)
        (.setResizable false)
-       (.setDefaultCloseOperation WindowConstants/DO_NOTHING_ON_CLOSE))
+       (.setDefaultCloseOperation WindowConstants/EXIT_ON_CLOSE))
      (.start timer)
-     (str [snake, apple, timer]))))
-
-;; (defn -game
-;;   [rtn speed]
-;;   (game rtn speed))
+     #_(str [snake, apple, timer]))))
 
 (def cli-options
   ;; An option with a required argument
