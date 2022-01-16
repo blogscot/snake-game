@@ -1,16 +1,16 @@
 (ns clojure-snake.core
   (:require [clojure.tools.cli :refer [parse-opts]])
   (:gen-class)
-  (:import (java.awt Color Dimension)
+  (:import (java.awt Graphics Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
            (java.awt.event ActionListener KeyListener KeyEvent)))
 
 (def snake (ref {}))
 (def apple (ref {}))
 (def direction (ref {}))
-(def steps (ref {}))
 (def score (ref {}))
 (def pause? (ref false))
+(def game-timer (ref {}))
 
 (def WIDTH "Width of the game board" 50)
 (def HEIGHT "Height of the game board" 30)
@@ -20,10 +20,8 @@
 (def DOWN "Down direction" [0 1])
 (def GREEN (Color. 15 160 70))
 (def RED (Color. 210 50 90))
+(def BLACK (Color. 0 0 0))
 
-; ---------------------------------------------------------------------
-; functional model
-; ---------------------------------------------------------------------
 ; constants to describe time, space and motion
 (def point-size 15)
 (def turn-millis 400)
@@ -48,18 +46,16 @@
    :color GREEN
    :score 0})
 
-; ---------------------------------------------------------------------
-; mutable model
-; ---------------------------------------------------------------------
-; function that resets the game state
-(defn reset-game [snake apple]
-  (dosync (ref-set snake (create-snake))
-          (ref-set apple (create-apple))
-          (ref-set direction RIGHT)
-          (ref-set steps 0)
-          (ref-set score 0)
-          (ref-set pause? false))
-  nil)
+(defn reset-game "resets the game state and timer."
+  [snake apple]
+  (let [{:keys [timer initial]} @game-timer]
+    (dosync (ref-set snake (create-snake))
+            (ref-set apple (create-apple))
+            (ref-set direction RIGHT)
+            (ref-set score 0)
+            (ref-set pause? false)
+            (ref-set game-timer (assoc @game-timer :period initial)))
+    (.setDelay timer initial)))
 
 (defn calc-new-head
   "Add vector points."
@@ -71,12 +67,19 @@
   [{[snake-head] :body} {apple :location}]
   (= snake-head apple))
 
+(defn increase-speed []
+  (let [{:keys [timer period]} @game-timer
+        new-period (int (* period 0.98))]
+    (dosync (ref-set game-timer (assoc @game-timer :period new-period)))
+    (.setDelay timer new-period)))
+
 (defn move
   "Move the snake in a given direction."
   [{:keys [body] :as snake} dir apple-loc]
   (assoc snake :body (cons (calc-new-head (first body) dir)
                            (if (eats? snake apple-loc)
                              (do
+                               (increase-speed)
                                (ref-set apple (create-apple))
                                (ref-set score (inc @score))
                                body)
@@ -105,8 +108,6 @@
 
 (defn player-win? [{body :body}] (>= (count body) win-length))
 
-
-
 (defn update-snake-direction
   "Updates the direction of the snake. Prevents reversing
    head into body which would terminate game."
@@ -125,17 +126,23 @@
 ; gui
 ; ---------------------------------------------------------------------
 ; function for making a point on the screen
-(defn fill-point [^java.awt.Graphics g pt ^java.awt.Color color]
+(defn fill-point [^Graphics g pt ^Color color]
   (let [[^int x ^int y ^int width ^int height] (point-to-screen-rect pt)]
     (.setColor g color)
     (.fillRect g x y width height)))
 
+(defn display-score [^Graphics g score]
+  (let [speed (:period @game-timer)
+        ^String score-text (str "SCORE " (* score 10) " SPEED " speed)]
+    (.setColor g BLACK)
+    (.drawString g score-text 305 20)))
 
 ; function for painting snakes and apples
 (defmulti paint (fn [_g object & _] (:type object)))
 
-(defmethod paint :apple [g {:keys [location color]}]
-  (fill-point g location color))
+(defmethod paint :apple [^Graphics g {:keys [location color]}]
+  (fill-point g location color)
+  (display-score g @score))
 
 (defmethod paint :snake [g {:keys [body color]}]
   (doseq [point body]
@@ -190,12 +197,12 @@
    (ref-set snake (create-snake))
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
-   (ref-set steps 0)
    (ref-set score 0)
 
    (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game, press P to toggle pause)")
          panel (game-panel frame snake apple)
-         timer (Timer. (- turn-millis (* 10 speed)) panel)]
+         period (- turn-millis (* 10 speed))
+         timer (Timer. period panel)]
      (doto panel
        (.setFocusable true)
        (.addKeyListener panel))
@@ -205,8 +212,8 @@
        (.setVisible true)
        (.setResizable false)
        (.setDefaultCloseOperation WindowConstants/EXIT_ON_CLOSE))
-     (.start timer)
-     #_(str [snake, apple, timer]))))
+     (ref-set game-timer {:timer timer :period period :initial period})
+     (.start timer))))
 
 (def cli-options
   ;; An option with a required argument
