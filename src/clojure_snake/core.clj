@@ -59,7 +59,7 @@
     (.setDelay timer initial)))
 
 (defn calc-new-head
-  "Add vector points."
+  "Returns the position of the new head"
   [& pts]
   (vec (apply map + pts)))
 
@@ -74,6 +74,13 @@
     (dosync (ref-set game-timer (assoc @game-timer :period new-period)))
     (.setDelay timer new-period)))
 
+(defn calc-score
+  "Returns the new score. Scoring increases in proportion to current game speed."
+  []
+  (let [{:keys [period initial]} @game-timer
+        delta (int (inc (/ (- initial period) 10)))]
+    (+ @score delta)))
+
 (defn move
   "Move the snake in a given direction."
   [{:keys [body] :as snake} dir apple-loc]
@@ -82,7 +89,7 @@
                              (do
                                (increase-speed)
                                (ref-set apple (create-apple))
-                               (ref-set score (inc @score))
+                               (ref-set score (calc-score))
                                body)
                              (butlast body)))))
 
@@ -183,8 +190,7 @@
               (= keycode KeyEvent/VK_RIGHT)
               (= keycode KeyEvent/VK_UP)
               (= keycode KeyEvent/VK_DOWN)) (update-snake-direction (dirs keycode))
-          (or (= keycode KeyEvent/VK_E)
-              (= keycode KeyEvent/VK_ESCAPE)) (System/exit 0)
+          (= keycode KeyEvent/VK_ESCAPE) (System/exit 0)
           (= keycode KeyEvent/VK_P) (dosync
                                      (ref-set pause? (not @pause?))))))
     (getPreferredSize []
@@ -200,7 +206,7 @@
    (ref-set direction RIGHT)
    (ref-set score 0)
 
-   (let [frame (JFrame. "Snake game - (press ESCAPE or E to exit the game, press P to toggle pause)")
+   (let [frame (JFrame. "Snake game - (press ESCAPE to exit, P to toggle pause)")
          panel (game-panel frame snake apple)
          period (- turn-millis (* 10 speed))
          timer (Timer. period panel)]
@@ -218,11 +224,11 @@
 
 (def cli-options
   ;; An option with a required argument
-  [["-s" "--speed SPEED" "Snake speed"
-    :default 25
+  [["-s" "--speed SPEED" "Snake speed. Values 0 (Easy) - 40 (Hard)"
+    :default 20
     :id :speed
     :parse-fn #(Integer/parseInt %)
-    :validate [#(< 0 % 40) "Must be a number between 0 and 40"]]
+    :validate [#(<= 0 % 40) "Must be a number between 0 and 40"]]
    ["-h" "--help"]])
 
 (defn usage [options-summary]
