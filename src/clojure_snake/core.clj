@@ -1,5 +1,6 @@
 (ns clojure-snake.core
-  (:require [clojure.tools.cli :refer [parse-opts]])
+  (:require [clojure.tools.cli :refer [parse-opts]]
+            [clojure.string :as str])
   (:gen-class)
   (:import (java.awt Graphics Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
@@ -24,8 +25,8 @@
 
 ; constants to describe time, space and motion
 (def point-size 15)
-(def turn-millis 400)
-(def win-length 50)
+(def turn-millis 600)
+(def win-length 100)
 (def dirs {KeyEvent/VK_LEFT LEFT
            KeyEvent/VK_RIGHT RIGHT
            KeyEvent/VK_UP UP
@@ -221,10 +222,25 @@
     :default 25
     :id :speed
     :parse-fn #(Integer/parseInt %)
-    :validate [#(< 0 % 40) "Must be a number between 0 and 40"]]])
+    :validate [#(< 0 % 40) "Must be a number between 0 and 40"]]
+   ["-h" "--help"]])
+
+(defn usage [options-summary]
+  (->> ["The Snake Game."
+        ""
+        "Guide your hungry snake around the playing field eating"
+        "apples by using the cursor keys."
+        ""
+        "Usage: snake-game [options]"
+        ""
+        "Options:"
+        options-summary]
+       (str/join \newline)))
 
 (defn -main
   [& args]
-  (let [opts (parse-opts args cli-options)
-        {:keys [speed]} (:options opts)]
-    (game speed)))
+  (let [{:keys [options summary errors]} (parse-opts args cli-options)
+        {:keys [speed help]} options]
+    (if (or (seq errors) help)
+      (println (usage summary))
+      (game speed))))
