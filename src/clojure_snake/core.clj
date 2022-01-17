@@ -1,6 +1,7 @@
 (ns clojure-snake.core
   (:require [clojure.tools.cli :refer [parse-opts]]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.java.io :as io])
   (:gen-class)
   (:import (java.awt Graphics Color Dimension)
            (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
@@ -74,12 +75,25 @@
     (dosync (ref-set game-timer (assoc @game-timer :period new-period)))
     (.setDelay timer new-period)))
 
-(defn calc-score
+(def highscore-filename "hscore.txt")
+
+(defn load-highscore []
+  (if (.exists (io/file highscore-filename))
+    (read-string (slurp highscore-filename))
+    0))
+
+(defn save-highscore [score]
+  (println score)
+  (when (> score (load-highscore))
+    (spit highscore-filename score)))
+
+
+(defn calc-new-score
   "Returns the new score. Scoring increases in proportion to current game speed."
-  []
+  [score]
   (let [{:keys [period initial]} @game-timer
         delta (int (inc (/ (- initial period) 10)))]
-    (+ @score delta)))
+    (+ score (* 10 delta))))
 
 (defn move
   "Move the snake in a given direction."
@@ -89,7 +103,7 @@
                              (do
                                (increase-speed)
                                (ref-set apple (create-apple))
-                               (ref-set score (calc-score))
+                               (ref-set score (calc-new-score @score))
                                body)
                              (butlast body)))))
 
@@ -140,8 +154,8 @@
     (.fillRect g x y width height)))
 
 (defn display-score [^Graphics g score]
-  (let [speed (:period @game-timer)
-        ^String score-text (str "SCORE " (* score 10) " SPEED " speed)]
+  (let [highscore (load-highscore)
+        ^String score-text (str "SCORE " score "  HIGH SCORE " highscore)]
     (.setColor g BLACK)
     (.drawString g score-text 305 20)))
 
@@ -177,6 +191,7 @@
       (when (false? @pause?)
         (update-positions snake apple))
       (when (game-over? @snake)
+        (save-highscore @score)
         (prompt-play-again frame e "Game Over!"))
       (when (player-win? @snake)
         (reset-game snake apple)
@@ -205,7 +220,6 @@
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
    (ref-set score 0)
-
    (let [frame (JFrame. "Snake game - (press ESCAPE to exit, P to toggle pause)")
          panel (game-panel frame snake apple)
          period (- turn-millis (* 10 speed))
