@@ -220,7 +220,7 @@
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
    (ref-set score 0)
-   (let [frame (JFrame. "Snake game - (press ESCAPE to exit, P to toggle pause)")
+   (let [frame (JFrame. "Snake Game - (press ESCAPE to exit, P to toggle pause)")
          panel (game-panel frame snake apple)
          period (- turn-millis (* 10 speed))
          timer (Timer. period panel)]
