@@ -1,11 +1,12 @@
 (ns clojure-snake.core
-  (:require [clojure.tools.cli :refer [parse-opts]]
+  (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.java.io :as io])
+            [clojure.tools.cli :refer [parse-opts]])
   (:gen-class)
   (:import (java.awt Graphics Color Dimension)
-           (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)
-           (java.awt.event ActionListener KeyListener KeyEvent)))
+           (java.awt.event ActionListener KeyListener KeyEvent)
+           (java.io FileInputStream BufferedInputStream)
+           (javax.swing JPanel JFrame Timer JOptionPane WindowConstants)))
 
 (def snake (ref {}))
 (def apple (ref {}))
@@ -87,6 +88,11 @@
   (when (> score (load-highscore))
     (spit highscore-filename score)))
 
+(defn play-file [filename]
+  (let [fstream (FileInputStream. filename)
+        bstream (BufferedInputStream. fstream)
+        player (javazoom.jl.player.Player. bstream)]
+    (.start (Thread. #(doto player (.play) (.close))))))
 
 (defn calc-new-score
   "Returns the new score. Scoring increases in proportion to current game speed."
@@ -104,6 +110,7 @@
                                (increase-speed)
                                (ref-set apple (create-apple))
                                (ref-set score (calc-new-score @score))
+                               (play-file "resources/drop.mp3")
                                body)
                              (butlast body)))))
 
