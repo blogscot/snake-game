@@ -8,7 +8,7 @@ My original intention was to merely improve my understanding of Clojure by analy
 
 ## Compilation and Usage
 
-Assuming that Java is installed on your machine, run the 
+In you are feeling in the mood and assuming that [Java](https://openjdk.java.net/) and [Leiningen](https://leiningen.org/) are installed on your machine, run the 
 
 ```
 lein uberjar
@@ -18,4 +18,8 @@ command to create a standalone jar file. The resulting exectuable is created in 
 ```
 java -jar clojure-snake-0.1.0-standalone.jar -s <speed>
 ```
-The optional parameter <speed> specifies the snake's initial speed and it must be an integer between 0 (slow) and 40 (fast).
+The optional parameter <speed> specifies the snake's initial speed and it must be an integer in the range 0 (slow) and 40 (fast).
+
+Alternatively, the latest [release](https://github.com/blogscot/snake-game/releases) can be downloaded directly and ran using the aforementioned command. 
+
+Enjoy!
