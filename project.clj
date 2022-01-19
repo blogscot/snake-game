@@ -1,4 +1,4 @@
-(defproject clojure-snake "0.1.0"
+(defproject clojure-snake "0.2.0"
   :description "The snake game implemented using Clojure and Swing."
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"

@@ -14,6 +14,7 @@
 (def score (ref {}))
 (def pause? (ref false))
 (def game-timer (ref {}))
+(def game-highscore (ref 0))
 
 (def WIDTH "Width of the game board" 50)
 (def HEIGHT "Height of the game board" 30)
@@ -24,6 +25,7 @@
 (def GREEN (Color. 15 160 70))
 (def RED (Color. 210 50 90))
 (def BLACK (Color. 0 0 0))
+(def GOLD (Color. 225 185 0))
 
 ; constants to describe time, space and motion
 (def point-size 15)
@@ -46,8 +48,18 @@
   []
   {:body (for [x (range 8 -1 -1)] [x 10])
    :type :snake
-   :color GREEN
-   :score 0})
+   :color GREEN})
+
+(def highscore-filename "hscore.txt")
+
+(defn load-highscore []
+  (if (.exists (io/file highscore-filename))
+    (read-string (slurp highscore-filename))
+    0))
+
+(defn save-highscore [score]
+  (when (> score (load-highscore))
+    (spit highscore-filename score)))
 
 (defn reset-game "resets the game state and timer."
   [snake apple]
@@ -57,7 +69,8 @@
             (ref-set direction RIGHT)
             (ref-set score 0)
             (ref-set pause? false)
-            (ref-set game-timer (assoc @game-timer :period initial)))
+            (ref-set game-timer (assoc @game-timer :period initial))
+            (ref-set game-highscore (load-highscore)))
     (.setDelay timer initial)))
 
 (defn calc-new-head
@@ -75,18 +88,6 @@
         new-period (int (* period 0.98))]
     (dosync (ref-set game-timer (assoc @game-timer :period new-period)))
     (.setDelay timer new-period)))
-
-(def highscore-filename "hscore.txt")
-
-(defn load-highscore []
-  (if (.exists (io/file highscore-filename))
-    (read-string (slurp highscore-filename))
-    0))
-
-(defn save-highscore [score]
-  (println score)
-  (when (> score (load-highscore))
-    (spit highscore-filename score)))
 
 (defn play-file [filename]
   (let [fstream (FileInputStream. filename)
@@ -160,9 +161,15 @@
     (.setColor g color)
     (.fillRect g x y width height)))
 
-(defn display-score [^Graphics g score]
-  (let [highscore (load-highscore)
+(defn display-score
+  "Displays the latest score and game highscore.
+   Also modifies the snake colour if the highscore is reached."
+  [^Graphics g score]
+  (let [highscore @game-highscore
         ^String score-text (str "SCORE " score "  HIGH SCORE " highscore)]
+    (when (>= score @game-highscore)
+      (dosync
+       (ref-set snake (assoc @snake :color GOLD))))
     (.setColor g BLACK)
     (.drawString g score-text 305 20)))
 
@@ -227,6 +234,7 @@
    (ref-set apple (create-apple))
    (ref-set direction RIGHT)
    (ref-set score 0)
+   (ref-set game-highscore (load-highscore))
    (let [frame (JFrame. "Snake Game - (press ESCAPE to exit, P to toggle pause)")
          panel (game-panel frame snake apple)
          period (- turn-millis (* 10 speed))
