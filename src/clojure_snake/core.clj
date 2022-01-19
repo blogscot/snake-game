@@ -163,11 +163,11 @@
 
 (defn display-score
   "Displays the latest score and game highscore.
-   Also modifies the snake colour if the highscore is reached."
+   Also modifies the snake colour if the highscore is exceeded."
   [^Graphics g score]
   (let [highscore @game-highscore
         ^String score-text (str "SCORE " score "  HIGH SCORE " highscore)]
-    (when (>= score @game-highscore)
+    (when (> score @game-highscore)
       (dosync
        (ref-set snake (assoc @snake :color GOLD))))
     (.setColor g BLACK)
